@@ -1,6 +1,6 @@
 (() => {
-    "use strict";
 
+    "use strict";
     const DEFAULT_CONFIG = {
         manifestUrl: null,
         targetUrl: "./DIABDAT.MPQ",
@@ -44,20 +44,17 @@
     };
 
     let uiRoot = null;
-    let uiBar = null;
-    let uiPercent = null;
-    let uiStatus = null;
     let uiLog = null;
+    let uiCursor = null;
     let lastUiLog = "";
     let uiStyle = null;
+    let lineCount = 0;
 
     function bringToFront() {
         if (!uiRoot) return;
         const parent = document.documentElement || document.body;
         if (!parent) return;
-        if (uiRoot.parentNode !== parent) {
-            parent.appendChild(uiRoot);
-        } else if (parent.lastChild !== uiRoot) {
+        if (uiRoot.parentNode !== parent || parent.lastChild !== uiRoot) {
             parent.appendChild(uiRoot);
         }
         uiRoot.style.zIndex = "2147483647";
@@ -70,7 +67,9 @@
     function ensureUI() {
         const host = document.body || document.documentElement;
         if (!host) {
-            document.addEventListener("DOMContentLoaded", ensureUI, { once: true });
+            document.addEventListener("DOMContentLoaded", ensureUI, {
+                once: true
+            });
             return;
         }
 
@@ -78,45 +77,52 @@
             uiStyle = document.createElement("style");
             uiStyle.id = "filemerge-style";
             uiStyle.textContent =
-                "#filemerge-overlay{position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100vh!important;z-index:2147483647!important;display:flex!important;align-items:center;justify-content:center;background:rgba(0,0,0,.92)!important;color:#fff!important;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif!important;margin:0!important;padding:16px!important;box-sizing:border-box!important;pointer-events:auto!important;visibility:visible!important;opacity:1!important}" +
+                "#filemerge-overlay{position:fixed!important;inset:0!important;z-index:2147483647!important;display:flex!important;align-items:center;justify-content:center;background:#0a0a0a!important;color:#33ff66!important;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;margin:0!important;padding:20px!important;box-sizing:border-box!important}" +
                 "#filemerge-overlay.filemerge-hide{opacity:0!important;pointer-events:none!important;transition:opacity .35s ease}" +
-                "#filemerge-panel{width:min(94vw,520px);max-height:90vh;overflow:auto;background:#121212;border:1px solid #333;border-radius:14px;padding:20px 18px 16px;box-shadow:0 16px 48px rgba(0,0,0,.6);box-sizing:border-box}" +
-                "#filemerge-title{font-size:17px;font-weight:700;margin:0 0 14px;color:#fff}" +
-                "#filemerge-track{height:14px;background:#2b2b2b;border-radius:999px;overflow:hidden;margin:0 0 10px}" +
-                "#filemerge-bar{height:100%;width:0%;background:linear-gradient(90deg,#3b82f6,#22c55e);border-radius:999px;transition:width .1s linear}" +
-                "#filemerge-meta{display:flex;justify-content:space-between;gap:12px;font-size:13px;margin:0 0 12px;color:#ddd}" +
-                "#filemerge-percent{font-weight:700;color:#86efac}" +
-                "#filemerge-status{font-size:13px;line-height:1.5;color:#eee;min-height:3.2em;margin:0 0 12px;white-space:pre-wrap;word-break:break-all}" +
-                "#filemerge-log{display:block!important;max-height:220px;min-height:120px;overflow:auto;background:#000;border:1px solid #333;border-radius:10px;padding:10px;font-size:12px;line-height:1.5;color:#9fef9f;white-space:pre-wrap;word-break:break-all;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}";
+                "#filemerge-term{width:min(96vw,720px);max-height:86vh;display:flex;flex-direction:column;background:#0c0c0c;border:1px solid #1f3d1f;border-radius:8px;box-shadow:0 0 0 1px #0a1a0a,0 20px 60px rgba(0,0,0,.7);overflow:hidden}" +
+                "#filemerge-term-bar{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#111;border-bottom:1px solid #1a1a1a;color:#8a8a8a;font-size:12px;user-select:none}" +
+                "#filemerge-term-bar .dots{display:flex;gap:6px}" +
+                "#filemerge-term-bar .dot{width:10px;height:10px;border-radius:50%}" +
+                "#filemerge-term-bar .dot.r{background:#ff5f56}" +
+                "#filemerge-term-bar .dot.y{background:#ffbd2e}" +
+                "#filemerge-term-bar .dot.g{background:#27c93f}" +
+                "#filemerge-term-bar .title{flex:1;text-align:center;color:#6f6;letter-spacing:.04em}" +
+                "#filemerge-log{flex:1;min-height:280px;max-height:70vh;overflow:auto;padding:14px 16px 8px;font-size:13px;line-height:1.55;color:#33ff66;white-space:pre-wrap;word-break:break-all;background:#0c0c0c}" +
+                "#filemerge-log .line{margin:0 0 2px}" +
+                "#filemerge-log .line.err{color:#ff6b6b}" +
+                "#filemerge-log .line.info{color:#7dd3fc}" +
+                "#filemerge-log .line.ok{color:#86efac}" +
+                "#filemerge-prompt{padding:0 16px 14px;color:#33ff66;font-size:13px}" +
+                "#filemerge-cursor{display:inline-block;width:8px;height:14px;background:#33ff66;margin-left:4px;vertical-align:-2px;animation:filemerge-blink 1s step-end infinite}" +
+                "@keyframes filemerge-blink{50%{opacity:0}}";
             (document.head || document.documentElement).appendChild(uiStyle);
         }
 
         if (!uiRoot || !document.getElementById("filemerge-overlay")) {
             uiRoot = document.createElement("div");
             uiRoot.id = "filemerge-overlay";
-            uiRoot.setAttribute("data-filemerge", "1");
             uiRoot.innerHTML =
-                '<div id="filemerge-panel">' +
-                '<div id="filemerge-title">Loading Game Data</div>' +
-                '<div id="filemerge-track"><div id="filemerge-bar"></div></div>' +
-                '<div id="filemerge-meta"><span id="filemerge-status-label">Preparing…</span><span id="filemerge-percent">0%</span></div>' +
-                '<div id="filemerge-status">Waiting…</div>' +
+                '<div id="filemerge-term">' +
+                '<div id="filemerge-term-bar">' +
+                '<div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>' +
+                '<div class="title">file-merge — DIABDAT.MPQ</div>' +
+                "</div>" +
                 '<div id="filemerge-log"></div>' +
+                '<div id="filemerge-prompt">$ <span id="filemerge-cursor"></span></div>' +
                 "</div>";
             host.appendChild(uiRoot);
+            lineCount = 0;
+            lastUiLog = "";
         } else {
             uiRoot = document.getElementById("filemerge-overlay");
         }
 
-        uiBar = document.getElementById("filemerge-bar");
-        uiPercent = document.getElementById("filemerge-percent");
-        uiStatus = document.getElementById("filemerge-status");
         uiLog = document.getElementById("filemerge-log");
-
+        uiCursor = document.getElementById("filemerge-cursor");
         bringToFront();
     }
 
-    function appendLog(line) {
+    function appendLog(line, kind) {
         ensureUI();
         bringToFront();
         if (!uiLog) {
@@ -125,58 +131,20 @@
         }
         if (line === lastUiLog) return;
         lastUiLog = line;
+
         const time = new Date().toLocaleTimeString();
-        uiLog.textContent += "[" + time + "] " + line + "\n";
+        const row = document.createElement("div");
+        row.className = "line" + (kind ? " " + kind : "");
+        row.textContent = "[" + time + "] " + line;
+        uiLog.appendChild(row);
+        lineCount++;
+
+        while (lineCount > 400 && uiLog.firstChild) {
+            uiLog.removeChild(uiLog.firstChild);
+            lineCount--;
+        }
+
         uiLog.scrollTop = uiLog.scrollHeight;
-    }
-
-    function updateUI(detail) {
-        ensureUI();
-        bringToFront();
-        if (!uiRoot) return;
-
-        uiRoot.classList.remove("filemerge-hide");
-
-        const pct = detail.percent || 0;
-        if (uiBar) uiBar.style.width = pct + "%";
-        if (uiPercent) uiPercent.textContent = pct + "%";
-
-        let status = "";
-        if (detail.phase === "download") {
-            status =
-                "下载分片 " +
-                (detail.partIndex + 1) +
-                "/" +
-                detail.partCount +
-                "\n" +
-                detail.partName +
-                "\n" +
-                detail.partLoadedText +
-                (detail.partTotal ? " / " + detail.partTotalText : "") +
-                "\n合计 " +
-                detail.totalLoadedText +
-                (detail.totalExpected ? " / " + detail.totalExpectedText : "");
-        } else if (detail.phase === "merge") {
-            status =
-                "正在合并分片…\n" +
-                detail.mergeOffsetText +
-                " / " +
-                detail.mergeTotalText;
-        } else if (detail.phase === "done") {
-            status = "完成 " + detail.totalLoadedText;
-        } else {
-            status = "准备中…";
-        }
-
-        if (uiStatus) uiStatus.textContent = status;
-
-        const label = document.getElementById("filemerge-status-label");
-        if (label) {
-            if (detail.phase === "download") label.textContent = "Downloading";
-            else if (detail.phase === "merge") label.textContent = "Merging";
-            else if (detail.phase === "done") label.textContent = "Done";
-            else label.textContent = "Preparing";
-        }
     }
 
     function hideUISoon() {
@@ -189,12 +157,10 @@
                     uiRoot.parentNode.removeChild(uiRoot);
                 }
                 uiRoot = null;
-                uiBar = null;
-                uiPercent = null;
-                uiStatus = null;
                 uiLog = null;
+                uiCursor = null;
             }, 400);
-        }, 800);
+        }, 900);
     }
 
     function formatBytes(n) {
@@ -213,21 +179,8 @@
         const s = Object.assign({}, progressState, extra || {});
         Object.assign(progressState, s);
 
-        let pct = 0;
-        if (s.phase === "download" && s.totalExpected > 0) {
-            pct = Math.min(100, (s.totalLoaded / s.totalExpected) * 100);
-        } else if (s.phase === "download" && s.partCount > 0) {
-            const partPct = s.partTotal > 0 ? s.partLoaded / s.partTotal : 0;
-            pct = Math.min(99, ((s.partIndex + partPct) / s.partCount) * 100);
-        } else if (s.phase === "merge" && s.mergeTotal > 0) {
-            pct = Math.min(100, (s.mergeOffset / s.mergeTotal) * 100);
-        } else if (s.phase === "done") {
-            pct = 100;
-        }
-
         const detail = {
             phase: s.phase,
-            percent: Math.round(pct * 10) / 10,
             partIndex: s.partIndex,
             partCount: s.partCount,
             partName: s.partName,
@@ -245,41 +198,39 @@
             mergeTotalText: formatBytes(s.mergeTotal)
         };
 
-        updateUI(detail);
+        ensureUI();
+        bringToFront();
 
         let logLine = "";
+        let kind = "";
+
         if (s.phase === "download") {
             logLine =
-                "下载 " +
+                "recv " +
                 (s.partIndex + 1) +
                 "/" +
                 s.partCount +
-                " " +
+                "  " +
                 s.partName +
-                " " +
+                "  " +
                 detail.partLoadedText +
-                (s.partTotal ? "/" + detail.partTotalText : "") +
-                " | 合计 " +
+                (s.partTotal ? " / " + detail.partTotalText : "") +
+                "  total " +
                 detail.totalLoadedText +
-                (s.totalExpected ? "/" + detail.totalExpectedText : "") +
-                " (" +
-                detail.percent +
-                "%)";
+                (s.totalExpected ? " / " + detail.totalExpectedText : "");
         } else if (s.phase === "merge") {
             logLine =
-                "合并 " +
+                "merge  " +
                 detail.mergeOffsetText +
-                "/" +
-                detail.mergeTotalText +
-                " (" +
-                detail.percent +
-                "%)";
+                " / " +
+                detail.mergeTotalText;
         } else if (s.phase === "done") {
-            logLine = "完成 " + detail.totalLoadedText + " (100%)";
+            logLine = "done   " + detail.totalLoadedText;
+            kind = "ok";
         }
 
         if (logLine) {
-            appendLog(logLine);
+            appendLog(logLine, kind);
             console.log("[FileMerge] " + logLine);
         }
 
@@ -352,7 +303,7 @@
             throw new Error("未配置 parts，也未配置 manifestUrl");
         }
 
-        appendLog("读取分片清单: " + config.manifestUrl);
+        appendLog("read manifest  " + config.manifestUrl, "info");
 
         const res = await window.__fileMergeNativeFetch(config.manifestUrl, {
             cache: "no-store"
@@ -378,10 +329,11 @@
         }
 
         appendLog(
-            "清单解析完成, 分片数: " +
+            "manifest ok  parts=" +
                 resolvedParts.length +
-                " 目标: " +
-                resolvedTarget
+                "  target=" +
+                resolvedTarget,
+            "info"
         );
     }
 
@@ -427,7 +379,7 @@
             loaded += result.value.byteLength;
 
             const now = Date.now();
-            if (now - lastEmit >= 80 || (totalHeader && loaded >= totalHeader)) {
+            if (now - lastEmit >= 100 || (totalHeader && loaded >= totalHeader)) {
                 lastEmit = now;
                 emitProgress({
                     phase: "download",
@@ -471,7 +423,7 @@
         mergePromise = (async () => {
             ensureUI();
             bringToFront();
-            appendLog("开始处理…");
+            appendLog("file-merge start", "info");
 
             await loadManifest();
 
@@ -479,8 +431,8 @@
             const parts = resolvedParts;
             const cacheName = config.cacheName || "file-merge-cache";
 
-            appendLog("目标文件: " + targetUrl);
-            appendLog("分片数: " + parts.length);
+            appendLog("target  " + targetUrl, "info");
+            appendLog("parts   " + parts.length, "info");
 
             const cache = await caches.open(cacheName);
             let cached =
@@ -488,7 +440,7 @@
                 (await cache.match(resolvedAbsoluteTarget));
 
             if (cached) {
-                appendLog("使用已有合并缓存");
+                appendLog("cache hit — skip download", "ok");
                 const len = Number(cached.headers.get("content-length")) || 0;
                 emitProgress({
                     phase: "done",
@@ -506,7 +458,7 @@
                 return cached;
             }
 
-            appendLog("开始加载分片, 共 " + parts.length + " 个");
+            appendLog("download begin", "info");
 
             emitProgress({
                 phase: "download",
@@ -554,6 +506,8 @@
                 totalSize += buffers[i].byteLength;
             }
 
+            appendLog("merge begin  " + formatBytes(totalSize), "info");
+
             emitProgress({
                 phase: "merge",
                 partIndex: parts.length - 1,
@@ -576,7 +530,7 @@
                 offset += buffers[i].byteLength;
 
                 const now = Date.now();
-                if (now - lastEmit >= 40 || offset === totalSize) {
+                if (now - lastEmit >= 50 || offset === totalSize) {
                     lastEmit = now;
                     emitProgress({
                         phase: "merge",
@@ -588,7 +542,7 @@
                 }
             }
 
-            appendLog("合并完成: " + totalSize + " bytes");
+            appendLog("merge complete  " + totalSize + " bytes", "ok");
 
             const finalResponse = new Response(mergedArray, {
                 status: 200,
@@ -601,7 +555,7 @@
 
             await cache.put(targetUrl, finalResponse.clone());
             await cache.put(resolvedAbsoluteTarget, finalResponse.clone());
-            appendLog("完整文件已写入 Cache Storage");
+            appendLog("cache put ok", "ok");
 
             emitProgress({
                 phase: "done",
@@ -622,13 +576,9 @@
             ensureUI();
             bringToFront();
             appendLog(
-                "失败: " + (error && error.message ? error.message : error)
+                "error  " + (error && error.message ? error.message : error),
+                "err"
             );
-            if (uiStatus) {
-                uiStatus.textContent =
-                    "合并失败\n" +
-                    (error && error.message ? error.message : String(error));
-            }
             throw error;
         }
     }
@@ -638,7 +588,7 @@
 
     window.fetch = async function (input, init) {
         if (isTargetRequest(input)) {
-            appendLog("拦截目标文件请求, 返回合并结果");
+            appendLog("intercept fetch → merged file", "info");
             const res = await mergeFiles();
             return res.clone();
         }
@@ -676,9 +626,7 @@
     };
 
     const keepTopTimer = setInterval(function () {
-        if (!uiRoot || !document.getElementById("filemerge-overlay")) {
-            return;
-        }
+        if (!uiRoot || !document.getElementById("filemerge-overlay")) return;
         if (progressState.phase === "done") {
             clearInterval(keepTopTimer);
             return;
