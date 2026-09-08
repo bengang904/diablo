@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <link rel="shortcut icon" href="./favicon.ico"/>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#000000"/>
+  <link rel="manifest" href="./manifest.json"/>
+  <title>DIABLO</title>
+  <link href="./static/css/main.fc8e7ad0.chunk.css?v=2" rel="stylesheet">
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+    }
+
+    #root {
+      width: 100%;
+      height: 100%;
+    }
+
+    #boot-cover {
+      position: fixed;
+      inset: 0;
+      background: #0b0b0b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      color: #ffffff;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      transition: opacity .35s ease;
+    }
+
+    #boot-cover.fade {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loader {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 6px solid #2b2b2b;
+      border-top-color: #ffffff;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 14px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #boot-panel {
+      width: min(90vw, 420px);
+      text-align: center;
+      padding: 16px 18px;
+    }
+
+    #boot-msg {
+      opacity: .9;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+
+  <div id="root"></div>
+
+  <div id="boot-cover" role="alert" aria-live="polite">
+    <div id="boot-panel">
+      <div class="loader"></div>
+      <div id="boot-msg">Loading Diablo...</div>
+    </div>
+  </div>
+
+  <script>
+    !function(f){
+      function e(e){
+        for(var r,t,n=e[0],o=e[1],u=e[2],l=0,i=[];l<n.length;l++)
+          t=n[l],p[t]&&i.push(p[t][0]),p[t]=0;
+        for(r in o)Object.prototype.hasOwnProperty.call(o,r)&&(f[r]=o[r]);
+        for(s&&s(e);i.length;)i.shift()();
+        return c.push.apply(c,u||[]),a()
+      }
+
+      function a(){
+        for(var e,r=0;r<c.length;r++){
+          for(var t=c[r],n=!0,o=1;o<t.length;o++){
+            var u=t[o];
+            0!==p[u]&&(n=!1)
+          }
+          n&&(c.splice(r--,1),e=l(l.s=t[0]))
+        }
+        return e
+      }
+
+      var t={},p={2:0},c=[];
+
+      function l(e){
+        if(t[e])return t[e].exports;
+        var r=t[e]={i:e,l:!1,exports:{}};
+        return f[e].call(r.exports,r,r.exports,l),r.l=!0,r.exports
+      }
+
+      l.m=f,l.c=t,l.d=function(e,r,t){
+        l.o(e,r)||Object.defineProperty(e,r,{enumerable:!0,get:t})
+      };
+
+      l.r=function(e){
+        "undefined"!=typeof Symbol&&Symbol.toStringTag&&Object.defineProperty(e,Symbol.toStringTag,{value:"Module"}),
+        Object.defineProperty(e,"__esModule",{value:!0})
+      };
+
+      l.t=function(r,e){
+        if(1&e&&(r=l(r)),8&e)return r;
+        if(4&e&&"object"==typeof r&&r&&r.__esModule)return r;
+
+        var t=Object.create(null);
+
+        if(l.r(t),Object.defineProperty(t,"default",{enumerable:!0,value:r}),2&e&&"string"!=typeof r) {
+          for(var n in r) {
+            l.d(t,function(e){return r[e]}.bind(null,n));
+          }
+        }
+
+        return t
+      };
+
+      l.n=function(e){
+        var r=e&&e.__esModule?function(){return e.default}:function(){return e};
+        return l.d(r,"a",r),r
+      };
+
+      l.o=function(e,r){
+        return Object.prototype.hasOwnProperty.call(e,r)
+      };
+
+      l.p="./";
+
+      var r=window.webpackJsonp=window.webpackJsonp||[],
+          n=r.push.bind(r);
+
+      r.push=e,r=r.slice();
+
+      for(var o=0;o<r.length;o++)e(r[o]);
+
+      var s=n;
+      a()
+    }([]);
+  </script>
+
+  <script>
+    (function () {
+      const cover = document.getElementById('boot-cover');
+      const msg = document.getElementById('boot-msg');
+
+      const MPQ_URL = 'DIABDAT.MPQ';
+      const MPQ_CACHE_VERSION = 'v1';
+      const IDB_DB_NAME = 'diablo-cache';
+      const IDB_STORE = 'files';
+      const IDB_KEY = 'DIABDAT.MPQ|' + MPQ_CACHE_VERSION;
+
+      function idbOpen() {
+        return new Promise((resolve, reject) => {
+          if (!('indexedDB' in window)) {
+            return reject(new Error('IndexedDB not supported'));
+          }
+          const req = indexedDB.open(IDB_DB_NAME, 1);
+          req.onupgradeneeded = function () {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(IDB_STORE)) {
+              db.createObjectStore(IDB_STORE, { keyPath: 'key' });
+            }
+          };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error || new Error('IndexedDB open failed'));
+        });
+      }
+
+      function idbGet(db, key) {
+        return new Promise((resolve, reject) => {
+          try {
+            const tx = db.transaction(IDB_STORE, 'readonly');
+            const st = tx.objectStore(IDB_STORE);
+            const rq = st.get(key);
+            rq.onsuccess = () => resolve(rq.result || null);
+            rq.onerror = () => reject(rq.error || new Error('IndexedDB get failed'));
+          } catch (error) {
+            reject(error);
+          }
+        });
+      }
+
+      function idbPut(db, rec) {
+        return new Promise((resolve, reject) => {
+          try {
+            const tx = db.transaction(IDB_STORE, 'readwrite');
+            const st = tx.objectStore(IDB_STORE);
+            const rq = st.put(rec);
+            rq.onsuccess = () => resolve(true);
+            rq.onerror = () => reject(rq.error || new Error('IndexedDB put failed'));
+          } catch (error) {
+            reject(error);
+          }
+        });
+      }
+
+      // Capture the game's drop listener so we can feed it the MPQ
+      const originalAddEventListener = document.addEventListener;
+      let capturedDrop = null;
+
+      document.addEventListener = function (type, listener, options) {
+        if (type === 'drop' && !capturedDrop) {
+          capturedDrop = listener;
+        }
+        return originalAddEventListener.apply(this, arguments);
+      };
+
+      function fakeDropEvent(file) {
+        return {
+          preventDefault: function () {},
+          dataTransfer: {
+            items: [{
+              kind: 'file',
+              getAsFile: function () { return file; }
+            }],
+            files: [file]
+          }
+        };
+      }
+
+      function fadeOutWhenReady() {
+        let tries = 0;
+        const timer = setInterval(() => {
+          tries++;
+          if (document.querySelector('canvas') || tries > 40) {
+            if (cover) {
+              cover.classList.add('fade');
+              setTimeout(() => cover.remove && cover.remove(), 400);
+            }
+            clearInterval(timer);
+          }
+        }, 250);
+      }
+
+      function setProgress(loaded, total) {
+        if (!msg) return;
+        if (!total) {
+          msg.textContent = 'Downloading Game Data...';
+          return;
+        }
+        const pct = Math.round(loaded / total * 100);
+        msg.textContent =
+          'Downloading Game Data... ' +
+          pct + '% (' +
+          (loaded / 1048576).toFixed(1) + '/' +
+          (total / 1048576).toFixed(1) + ' MB)';
+      }
+
+      async function fetchBlob(url) {
+        const response = await fetch(url, {
+          mode: 'cors',
+          credentials: 'omit'
+        });
+        if (!response.ok) {
+          throw new Error('HTTP ' + response.status);
+        }
+        const total = +response.headers.get('content-length') || 0;
+        if (!response.body || !response.body.getReader) {
+          const blob = await response.blob();
+          setProgress(blob.size, total || blob.size);
+          return blob;
+        }
+        const reader = response.body.getReader();
+        const chunks = [];
+        let loaded = 0;
+        for (;;) {
+          const result = await reader.read();
+          if (result.done) break;
+          chunks.push(result.value);
+          loaded += result.value.byteLength;
+          setProgress(loaded, total);
+        }
+        return new Blob(chunks, { type: 'application/octet-stream' });
+      }
+
+      async function getCachedOrFetch() {
+        let db = null;
+        try {
+          db = await idbOpen();
+          const record = await idbGet(db, IDB_KEY);
+          if (record && record.blob && record.blob.size) {
+            if (msg) msg.textContent = 'Loading Game Data (cached)...';
+            return record.blob;
+          }
+        } catch (_) {}
+
+        if (msg) msg.textContent = 'Downloading Game Data...';
+        const blob = await fetchBlob(MPQ_URL);
+
+        try {
+          if (!db) db = await idbOpen();
+          await idbPut(db, {
+            key: IDB_KEY,
+            name: 'DIABDAT.MPQ',
+            version: MPQ_CACHE_VERSION,
+            size: blob.size,
+            savedAt: Date.now(),
+            blob: blob
+          });
+        } catch (_) {}
+
+        return blob;
+      }
+
+      async function go() {
+        // Wait for the game to register its drop handler
+        for (let i = 0; i < 80 && !capturedDrop; i++) {
+          await new Promise(resolve => setTimeout(resolve, 125));
+        }
+
+        if (!capturedDrop) {
+          if (msg) msg.textContent = 'Error: game shell not ready.';
+          return;
+        }
+
+        try {
+          const blob = await getCachedOrFetch();
+          const file = new File([blob], 'DIABDAT.MPQ', {
+            type: 'application/octet-stream'
+          });
+
+          if (msg) msg.textContent = 'Starting...';
+          capturedDrop(fakeDropEvent(file));
+          fadeOutWhenReady();
+        } catch (err) {
+          console.error('Failed to load DIABDAT.MPQ:', err);
+          if (msg) {
+            msg.textContent = 'Failed to load game data. Place DIABDAT.MPQ next to this page.';
+          }
+        }
+      }
+
+      if (document.readyState === 'complete') {
+        go();
+      } else {
+        window.addEventListener('load', go, { once: true });
+      }
+    })();
+  </script>
+
+  <script src="./static/js/0.a7a050b6.chunk.js?v=2"></script>
+  <script src="./static/js/5.03243553.chunk.js?v=2"></script>
+  <script src="./static/js/main.1386cf44.chunk.js?v=2"></script>
+</body>
+</html>
